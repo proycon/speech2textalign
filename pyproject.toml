@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools >= 62.6"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "speech2textalign"
+description = "Transcribe audio and align transcription with existing text input"
+version = "0.1"
+dynamic = ["dependencies"]
+authors = [
+    {name = "Maarten van Gompel", email = "proycon@anaproy.nl"},
+    {name = "Martijn Bentum", email = "martijn.bentum@ru.nl"}
+]
+maintainers = [
+    {name = "Maarten van Gompel", email = "proycon@anaproy.nl"}
+]
+readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+]
+license = "GPL-3.0-or-later"
+requires-python = ">= 3.9"
+
+[project.urls]
+Repository = "https://github.com/proycon/speech2textalign.git"
+
+[project.scripts]
+speech2text = "speech2textalign.wav2vec2:main"
+
+[tool.setuptools]
+packages = [ "speech2textalign" ]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}

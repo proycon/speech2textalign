@@ -1,8 +1,5 @@
 import argparse
-import glob
 import os
-import logger
-import time
 
 def check_arguments(args):
     """check if argument are usable"""
@@ -46,13 +43,13 @@ def transcribe_arguments(verbose = False, add_device_field = False):
     p = argparse.ArgumentParser(description=m)
     if add_device_field:
         p.add_argument("--device",type=int,
-            help="gpu device number (set -1 for cpu)",required = True)
+            help="gpu device number (set -1 for cpu)",default=0)
     p.add_argument("--model-dir", type=str,
         help="directory where the model is located", required = False)
     p.add_argument("--filename",type=str,
         help="audio filename to be transcribed",required = False)
     p.add_argument("--input-dir",type=str,
-        help="directory with audiofilename to be transcribed",required = False)
+        help="directory with audio files to be transcribed",required = False)
     p.add_argument("--output-dir",type=str,
         help="directory to store transcription",required = False)
     p.add_argument("--keep-alive-minutes",type=int,
@@ -69,14 +66,3 @@ def transcribe_arguments(verbose = False, add_device_field = False):
     check_arguments(args)
     return args
 
-def show_log_arguments():
-    m = "show log for gpu device"
-    p = argparse.ArgumentParser(description=m)
-    p.add_argument("--server-name", type=str,
-        help="server where the gpu is located", required = True)
-    p.add_argument("--device",type=int,
-        help="gpu device number",required = True)
-    p.add_argument("--start-time",type=int,
-        help="epoch time as integer",required = False)
-    args = p.parse_args()
-    return args

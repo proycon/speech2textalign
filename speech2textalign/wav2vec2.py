@@ -1,20 +1,22 @@
-import argument_handler 
-import audio
 import glob
 import sys
-from argparse import Namespace
-from typing import Optional, Union
 import os 
 import time
+from argparse import Namespace
+from typing import Optional, Union
 from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import Wav2Vec2ProcessorWithLM
+
 
 """ 
 More info about pipelines for ASR see:
 https://huggingface.co/docs/transformers/v4.19.2/en/main_classes/pipelines#transformers.AutomaticSpeechRecognitionPipeline
 """
 from transformers import AutomaticSpeechRecognitionPipeline
+
+from speech2textalign.argument_handler import transcribe_arguments, check_arguments
+from speech2textalign.audio import load_audio
 
 
 def load_model(recognizer_dir) -> Wav2Vec2ForCTC:
@@ -69,7 +71,7 @@ def decode_audiofile(filename: str , pipeline: AutomaticSpeechRecognitionPipelin
     transcribe an audio file with pipeline object
     loads the audio with librosa
     """
-    a = audio.load_audio(filename,start,end)
+    a = load_audio(filename,start,end)
     output = pipeline(a, return_timestamps = timestamp_type)
     return output 
 
@@ -101,12 +103,12 @@ def save(table_str: str, audio_filename: str, extension: str, output_dir: str = 
     except PermissionError:
         print("could not write file to", filename, "due to a permission error", file=sys.stderr)
 
-def pipeline_output2table(output: dict) -> list[tuple]:
+def pipeline_output2table(output: dict) -> list[tuple[str,float,float]]:
     """convert pipeline output to table (word\tstart\tend)."""
     table = []
     for d in output["chunks"]:
         start, end = d["timestamp"]
-        table.append((d["text"], start, end))
+        table.append((d["text"], float(start), float(end)))
     return table
 
 def stem_filename(filename: str) -> str:
@@ -237,8 +239,11 @@ def transcribe(args: Namespace):
     print("closing down transcriber", file=sys.stderr)
     return transcriber.transcribed_audio_files
 
-if __name__ == "__main__":
-    args = argument_handler.transcribe_arguments(add_device_field = True)
-    argument_handler.check_arguments(args)
+def main():
+    args = transcribe_arguments(add_device_field = True)
+    check_arguments(args)
     transcribe(args)
+
+if __name__ == "__main__":
+    main()
 
