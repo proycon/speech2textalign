@@ -46,7 +46,7 @@ def transcribe_arguments(verbose = False, add_device_field = False):
     p = argparse.ArgumentParser(description=m)
     if add_device_field:
         p.add_argument("--device",type=int,
-            help="gpu device number",required = True)
+            help="gpu device number (set -1 for cpu)",required = True)
     p.add_argument("--model-dir", type=str,
         help="directory where the model is located", required = False)
     p.add_argument("--filename",type=str,
