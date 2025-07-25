@@ -3,10 +3,13 @@ import sys
 import os 
 import time
 from argparse import Namespace
-from typing import Optional, Union
+from typing import Optional, Union, Any
+from itertools import zip_longest
 from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import Wav2Vec2ProcessorWithLM
+
+from speech2textalign.align import align
 
 
 """ 
@@ -66,7 +69,7 @@ def load_pipeline(recognizer_dir: str, model: Optional[Wav2Vec2ForCTC] = None,pr
 
 
 def decode_audiofile(filename: str , pipeline: AutomaticSpeechRecognitionPipeline, start: float =0.0, end: Optional[float] =None, 
-                     timestamp_type: str = "word") -> dict[str,Union[str,float,int,bool]]:
+                     timestamp_type: str = "word") -> list[dict[str,Any]]:
     """
     transcribe an audio file with pipeline object
     loads the audio with librosa
@@ -143,7 +146,9 @@ def _table2str(table: list[tuple], sep = "\t") -> str:
 class Transcriber:
     """transcribe audio files in input_dir or the audio file filename."""
     def __init__(self, model_dir: str, input_dir: str, output_dir: str,
-                 model: Optional[Wav2Vec2ForCTC] = None, pipeline: Optional[AutomaticSpeechRecognitionPipeline] = None, device: int = -1, filename: str = "",
+                 model: Optional[Wav2Vec2ForCTC] = None, pipeline: Optional[AutomaticSpeechRecognitionPipeline] = None, 
+                 device: int = -1, filename: str = "",
+                 align_filename: str = "",
                  timestamp_type: str = "word"):
         """transcribe audio files in input_dir
         model_dir       directory of the wav2vec2 model
@@ -155,7 +160,9 @@ class Transcriber:
         self.output_dir = output_dir 
         self.device = device
         self.filename = filename
+        self.align_filename = align_filename
         self.timestamp_type = timestamp_type
+        self.align_filenames: list[Optional[str]] = []
         if pipeline:
             self.pipeline = pipeline
         elif model: 
@@ -170,8 +177,16 @@ class Transcriber:
         self.ok = True
         if self.input_dir:
             self.audio_filenames = glob.glob(self.input_dir + "*.wav")
+            for filename in self.audio_filenames:
+                align_filename = filename.replace(".wav",".txt")
+                if os.path.exists(align_filename):
+                    self.align_filenames.append(align_filename)
+                else:
+                    self.align_filenames.append(None)
         elif self.filename:
             self.audio_filenames = [self.filename]
+            if self.align_filename:
+                self.align_filenames = [self.align_filename]
         else: self.ok = False
         m = "transcribed audio files" 
         m += " ".join(self.transcribed_audio_files.keys())
@@ -179,19 +194,26 @@ class Transcriber:
     def transcribe(self):
         self.load_audio_filenames()
         self.did_transcription= False
-        for filename in self.audio_filenames:
-            if filename not in self.transcribed_audio_files.keys():
-                print(f"transcribing {filename} on device {self.device}", file=sys.stderr)
+        for audio_filename, align_filename in zip_longest(*[self.audio_filenames, self.align_filenames]):
+            if audio_filename not in self.transcribed_audio_files.keys():
+                print(f"transcribing {audio_filename} on device {self.device}", file=sys.stderr)
                 try: 
-                    o = decode_audiofile(filename, self.pipeline,
+                    output = decode_audiofile(audio_filename, self.pipeline,
                     timestamp_type = self.timestamp_type)
                 except ValueError:
-                    print(f"failed to transcribe {filename} on device {self.device}",file=sys.stderr)
+                    print(f"failed to transcribe {audio_filename} on device {self.device}",file=sys.stderr)
                     return
-                save_pipeline_output_to_files(o, filename,self.output_dir)
-                self.transcribed_audio_files[filename] = o
+                save_pipeline_output_to_files(output, audio_filename,self.output_dir)
+                if align_filename:
+                    print(f"aligning {audio_filename} with reference {align_filename}", file=sys.stderr)
+                    with open(align_filename,'r',encoding='utf-8') as f:
+                        reftext = f.read()
+                    store = align(pipeline_output2table(output), reftext)
+                    store.set_filename(align_filename.replace(".txt",".store.stam.json"))
+                    store.save()
+                self.transcribed_audio_files[audio_filename] = output
                 self.did_transcription = True
-                print(f"transcribed {filename} on device {self.device}",file=sys.stderr)
+                print(f"transcribed {audio_filename} on device {self.device}",file=sys.stderr)
 
 
 def pre_checks(args: Namespace) -> tuple[int,str,str]:
@@ -225,6 +247,7 @@ def transcribe(args: Namespace):
     print("loading transcriber", file=sys.stderr)
     transcriber = Transcriber(args.model_dir, input_dir, output_dir,
         device = device, filename = args.filename, 
+        align_filename=args.align,
         timestamp_type = timestamp_type)
     if not _check_transcriber_ok(transcriber): return
     print("start transcribing", file=sys.stderr)

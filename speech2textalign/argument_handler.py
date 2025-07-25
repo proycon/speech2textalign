@@ -22,6 +22,8 @@ def arguments_to_command(args, verbose = False):
     command = ""
     if args.filename:
         command += " --filename " + os.path.abspath(args.filename)
+    if args.align:
+        command += " --align " + os.path.abspath(args.align)
     if args.input_dir:
         command += " --input-dir " + os.path.abspath(args.input_dir)
     if args.output_dir:
@@ -48,8 +50,10 @@ def transcribe_arguments(verbose = False, add_device_field = False):
         help="directory where the model is located", required = False)
     p.add_argument("--filename",type=str,
         help="audio filename to be transcribed",required = False)
+    p.add_argument("--align",type=str,
+        help="text file that contains the text for the audio from --filename to be aligned with",required = False)
     p.add_argument("--input-dir",type=str,
-        help="directory with audio files to be transcribed",required = False)
+        help="directory with wav audio files to be transcribed, and optionally with similarly named text files (txt extension) to be aligned with",required = False)
     p.add_argument("--output-dir",type=str,
         help="directory to store transcription",required = False)
     p.add_argument("--keep-alive-minutes",type=int,
