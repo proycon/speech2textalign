@@ -1,4 +1,4 @@
-# Speech 2 Text Alignment
+# Speech to Text Alignment
 
 This command-line tool takes an audio file containing speech as input, along with a text file of that covers the same speech.
 It will then do automatic speech recognition on the audio, find the exact timestamps of each word, and aligns this information
