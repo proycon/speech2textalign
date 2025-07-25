@@ -26,7 +26,7 @@ requires-python = ">= 3.9"
 Repository = "https://github.com/proycon/speech2textalign.git"
 
 [project.scripts]
-speech2text = "speech2textalign.wav2vec2:main"
+speech2textalign = "speech2textalign.wav2vec2:main"
 
 [tool.setuptools]
 packages = [ "speech2textalign" ]
