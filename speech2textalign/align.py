@@ -1,4 +1,5 @@
 import sys
+from io import TextIOWrapper
 from stam import  AnnotationStore, Offset, Selector, TextSelectionOperator
 
 def align(table: list[tuple[str,float,float]], reftext: str) -> AnnotationStore:
@@ -37,14 +38,25 @@ def align(table: list[tuple[str,float,float]], reftext: str) -> AnnotationStore:
             for annotation in left.related_text(TextSelectionOperator.embeds()).annotations(set="timeinfo"):
                 annotation.transpose(transposition)
                 transposed += 1
-            print(f"\"{left.text()}\"\t{left.offset()} -->  \"{right.text()}\"\t{right.offset()}")
+            print(f"\"{left.text()}\"\t{left.offset()} -->  \"{right.text()}\"\t{right.offset()}", file=sys.stderr)
     print(f"transposed {transposed} annotations", file=sys.stderr)
     return store
 
+def tsv_output(store: AnnotationStore, file: TextIOWrapper):
+    transcription_resource = store.resource("reference")
+    print("TEXT\tOFFSET\tSTARTTIME\tENDTIME", file=file)
+    for annotation in transcription_resource.annotations(set="timeinfo"):
+        try:
+            starttime = next(annotation.data(set="timeinfo",key="starttime"))
+            endtime = next(annotation.data(set="timeinfo",key="endtime"))
+        except StopIteration:
+            continue
+        print(f"{str(annotation)}\t{annotation.offset()}\t{starttime}\t{endtime}", file=file)
 
-
-
-
-
-
-
+def html_output(store: AnnotationStore, file: TextIOWrapper):
+    query = """
+SELECT RESOURCE ?res WHERE ID \"reference\"; 
+{ @VALUETAG SELECT ANNOTATION ?starttime WHERE RESOURCE ?res; DATA \"timeinfo\" \"starttime\";  
+| @VALUETAG SELECT ANNOTATION ?endtime WHERE RESOURCE ?res; DATA \"timeinfo\" \"endtime\"; }
+    """
+    print(store.view(query),file=file)

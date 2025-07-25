@@ -9,7 +9,7 @@ from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import Wav2Vec2ProcessorWithLM
 
-from speech2textalign.align import align
+from speech2textalign.align import align, tsv_output, html_output
 
 
 """ 
@@ -209,7 +209,14 @@ class Transcriber:
                     with open(align_filename,'r',encoding='utf-8') as f:
                         reftext = f.read()
                     store = align(pipeline_output2table(output), reftext)
-                    store.set_filename(align_filename.replace(".txt",".store.stam.json"))
+                    tsvfilename= _make_decoding_output_filename(audio_filename, self.output_dir, ".tsv")
+                    with open(tsvfilename,'w',encoding='utf-8') as f:
+                        tsv_output(store, file=f)
+                    htmlfilename = _make_decoding_output_filename(audio_filename, self.output_dir, ".html")
+                    with open(htmlfilename,'w',encoding='utf-8') as f:
+                        html_output(store, file=f)
+                    storefilename = _make_decoding_output_filename(audio_filename, self.output_dir, ".store.stam.json")
+                    store.set_filename(storefilename)
                     store.save()
                 self.transcribed_audio_files[audio_filename] = output
                 self.did_transcription = True
