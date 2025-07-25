@@ -1,4 +1,4 @@
 transformers
 librosa
 torch
-stam
+stam >= 0.11.1
