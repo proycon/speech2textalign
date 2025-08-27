@@ -1,4 +1,6 @@
 transformers
 librosa
 torch
+protobuf
+pyctcdecode
 stam >= 0.11.1

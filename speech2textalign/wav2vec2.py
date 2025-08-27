@@ -21,6 +21,7 @@ from transformers import AutomaticSpeechRecognitionPipeline
 from speech2textalign.argument_handler import transcribe_arguments, check_arguments
 from speech2textalign.audio import load_audio
 
+DEFAULT_MODEL = "FremyCompany/xls-r-2b-nl-v2_lm-5gram-os"
 
 def load_model(recognizer_dir) -> Wav2Vec2ForCTC:
     model = Wav2Vec2ForCTC.from_pretrained(recognizer_dir)
@@ -35,7 +36,7 @@ def load_processor(recognizer_dir) -> Wav2Vec2Processor:
     processor = Wav2Vec2Processor.from_pretrained(recognizer_dir)
     return processor
 
-def load_pipeline(recognizer_dir: str, model: Optional[Wav2Vec2ForCTC] = None,processor: Optional[Wav2Vec2Processor] = None, 
+def load_pipeline(recognizer_dir: Optional[str] = None, model: Optional[Wav2Vec2ForCTC] = None,processor: Optional[Wav2Vec2Processor] = None, 
     chunk_length_s = 10, 
     device = -1):
     """
@@ -145,7 +146,7 @@ def _table2str(table: list[tuple], sep = "\t") -> str:
 
 class Transcriber:
     """transcribe audio files in input_dir or the audio file filename."""
-    def __init__(self, model_dir: str, input_dir: str, output_dir: str,
+    def __init__(self, model_dir: Optional[str], input_dir: str, output_dir: str,
                  model: Optional[Wav2Vec2ForCTC] = None, pipeline: Optional[AutomaticSpeechRecognitionPipeline] = None, 
                  device: int = -1, filename: str = "",
                  align_filename: str = "",
@@ -167,9 +168,12 @@ class Transcriber:
             self.pipeline = pipeline
         elif model: 
             self.model = model
-            self.pipeline = load_pipeline(recognizer_dir= self.model_dir, model = model,device = device)
-        else:
+            if self.model_dir:
+                self.pipeline = load_pipeline(recognizer_dir= self.model_dir, model = model,device = device)
+        elif self.model_dir:
             self.pipeline = load_pipeline(recognizer_dir = self.model_dir, device = device)
+        else:
+            raise Exception("No model to load")
         self.transcribed_audio_files = {}
         self.did_transcription= False
     
@@ -252,10 +256,18 @@ def transcribe(args: Namespace):
     timestamp_type = "char" if args.label_timestamps else "word"
     print("using timestamp type:",timestamp_type, file=sys.stderr)
     print("loading transcriber", file=sys.stderr)
-    transcriber = Transcriber(args.model_dir, input_dir, output_dir,
-        device = device, filename = args.filename, 
-        align_filename=args.align,
-        timestamp_type = timestamp_type)
+    if args.model_dir:
+        transcriber = Transcriber(args.model_dir, input_dir, output_dir,
+            device = device, filename = args.filename, 
+            align_filename=args.align,
+            timestamp_type = timestamp_type)
+    else:
+        pipeline = load_pipeline(model = Wav2Vec2ForCTC.from_pretrained(DEFAULT_MODEL), processor = Wav2Vec2Processor.from_pretrained(DEFAULT_MODEL), device = device)
+        transcriber = Transcriber(None, input_dir, output_dir,
+            pipeline = pipeline,
+            device = device, filename = args.filename, 
+            align_filename=args.align,
+            timestamp_type = timestamp_type)
     if not _check_transcriber_ok(transcriber): return
     print("start transcribing", file=sys.stderr)
     last_transcription = time.time()
